@@ -3,15 +3,18 @@ package greigmmyles.coins;
 public class CoinInventoryEmptyException extends Exception
 {
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 8491608550152818792L;
-
     public CoinInventoryEmptyException(String message)
     {
         super(message);
     }
+    
+    public CoinInventoryEmptyException()
+    {
+        super();
+        System.out.println("No coins in the machine");
+    }
+    
+    
     
     
 

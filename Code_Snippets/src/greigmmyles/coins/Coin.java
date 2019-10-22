@@ -4,8 +4,9 @@ public class Coin
 {
 
     private double coinValue;
-    
-    public Coin(double coinValue) {
+
+    public Coin(double coinValue)
+    {
         this.setCoinValue(coinValue);
     }
 
@@ -24,8 +25,9 @@ public class Coin
     {
         this.coinValue = coinValue;
     }
-    
-    public String toString() {
+
+    public String toString()
+    {
         return "\n" + getCoinValue();
     }
 }
