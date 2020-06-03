@@ -1,0 +1,286 @@
+/**
+ * init.c
+ *
+ * DayZ Expansion Mod
+ * www.dayzexpansion.com
+ * © 2020 DayZ Expansion Mod Team
+ *
+ * This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. 
+ * To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/.
+ *
+*/
+
+#include "$CurrentDir:\\mpmissions\\Expansion.ChernarusPlus\\expansion\\ExpansionObjectSpawnTools.c"
+#include "$CurrentDir:\\mpmissions\\Expansion.ChernarusPlus\\expansion\\missions\\MissionConstructor.c"
+
+void main()
+{
+	bool loadTraderObjects = false;
+	bool loadTraderNPCs = false;
+
+	string MissionWorldName = "empty";
+	GetGame().GetWorldName(MissionWorldName);
+
+	switch(MissionWorldName)
+	{
+		case "ChernarusPlusGloom":
+		{
+			MissionWorldName = "ChernarusPlus";
+			break;
+		}
+		case "enochGloom":
+		{
+			MissionWorldName = "enoch";
+			break;
+		}
+	}
+
+	if (MissionWorldName != "empty")
+	{
+		//! Spawn mission objects and traders
+		FindMissionFiles(MissionWorldName, loadTraderObjects, loadTraderNPCs);
+	}
+
+	//! Returning weather class reference
+	Weather weather = g_Game.GetWeather();
+
+	//! Disable weather controller from mission
+	weather.MissionWeather(true); 
+	
+	//! Setup weather propperties
+	weather.GetRain().SetLimits( 0.0 , 0.0 );
+    weather.GetOvercast().SetLimits( 0.0 , 0.0 );
+    weather.GetFog().SetLimits( 0.0 , 0.01 );
+
+    weather.GetOvercast().SetForecastChangeLimits( 0.0, 0.1 );
+    weather.GetRain().SetForecastChangeLimits( 0.0, 0.0 );
+    weather.GetFog().SetForecastChangeLimits( 0.0, 0.0 );
+
+    weather.GetOvercast().SetForecastTimeLimits( 1800 , 1800 );
+    weather.GetRain().SetForecastTimeLimits( 600 , 600 );
+    weather.GetFog().SetForecastTimeLimits( 1800 , 1800 );
+    
+    weather.GetOvercast().Set( Math.RandomFloatInclusive(0.0, 0.3), 0, 0);
+    weather.GetRain().Set( Math.RandomFloatInclusive(0.0, 0.0), 0, 0);
+    weather.GetFog().Set( Math.RandomFloatInclusive(0.0, 0.1), 0, 0);
+    
+    weather.SetWindMaximumSpeed(15);
+    weather.SetWindFunctionParams(0.1, 0.3, 50);    
+
+	//! Init server central economy
+	Hive ce = CreateHive();
+	if ( ce )
+		ce.InitOffline();
+	
+	//! Setup time and date
+	int year, month, day, hour, minute;
+	int reset_month = 9, reset_day = 20;
+	GetGame().GetWorld().GetDate(year, month, day, hour, minute);
+
+	if ((month == reset_month) && (day < reset_day))
+	{
+		GetGame().GetWorld().SetDate(year, reset_month, reset_day, hour, minute);
+	}
+	else
+	{
+		if ((month == reset_month + 1) && (day > reset_day))
+		{
+			GetGame().GetWorld().SetDate(year, reset_month, reset_day, hour, minute);
+		}
+		else
+		{
+			if ((month < reset_month) || (month > reset_month + 1))
+			{
+				GetGame().GetWorld().SetDate(year, reset_month, reset_day, hour, minute);
+			}
+		}
+	}
+}
+
+/**@class		CustomExpansionMission
+ * @brief		This class handle expansion serverside mission
+ **/
+class CustomMission: MissionServer
+{
+	// ------------------------------------------------------------
+	// SetRandomHealth
+	// ------------------------------------------------------------
+	void SetRandomHealth(EntityAI itemEnt)
+	{
+		if ( itemEnt )
+		{
+			int rndHlt = Math.RandomInt(55,100);
+			itemEnt.SetHealth("","",rndHlt);
+		}
+	}
+	
+	override void OnInit()
+	{
+		ExpansionMissionModule missionModule;
+		if ( Class.CastTo( missionModule, GetModuleManager().GetModule( ExpansionMissionModule ) ) )
+		{
+			missionModule.SetMissionConstructor( COMMissionConstructor );
+		}
+
+		super.OnInit();
+	}
+	
+	// ------------------------------------------------------------
+	// Override PlayerBase CreateCharacter
+	// ------------------------------------------------------------
+	override PlayerBase CreateCharacter(PlayerIdentity identity, vector pos, ParamsReadContext ctx, string characterName)
+	{
+		Entity playerEnt;
+		playerEnt = GetGame().CreatePlayer(identity, characterName, pos, 0, "NONE");
+		Class.CastTo(m_player, playerEnt);
+		
+		GetGame().SelectPlayer(identity, m_player);
+		
+		return m_player;
+	}
+	
+	// ------------------------------------------------------------
+	// void addMags
+	// ------------------------------------------------------------
+	void addMags(PlayerBase player, string mag_type, int count)
+	{
+		if (count < 1)
+			return;
+
+		EntityAI mag;
+
+		for (int i = 0; i < count; i++) {
+			mag = player.GetInventory().CreateInInventory(mag_type);
+			player.SetQuickBarEntityShortcut(mag, i + 1, true);
+		}
+
+	}
+	
+	// ------------------------------------------------------------
+	// Class 1
+	// ------------------------------------------------------------
+	EntityAI classOne(PlayerBase player)
+	{
+		EntityAI gun = player.GetHumanInventory().CreateInHands("MakarovIJ70");
+		addMags(player, "Mag_IJ70_8Rnd", 2);
+
+		return gun;
+	}
+	
+	// ------------------------------------------------------------
+	// Class 2
+	// ------------------------------------------------------------
+	EntityAI classTwo(PlayerBase player)
+	{
+		EntityAI gun = player.GetHumanInventory().CreateInHands("CZ75");
+		addMags(player, "Mag_CZ75_15Rnd", 2);
+
+		return gun;
+	}
+
+	// ------------------------------------------------------------
+	// Class 3
+	// ------------------------------------------------------------
+	EntityAI classThree(PlayerBase player)
+	{
+		EntityAI gun = player.GetHumanInventory().CreateInHands("Glock19");
+		addMags(player, "Mag_Glock_15Rnd", 2);
+
+		return gun;
+	}
+
+	// ------------------------------------------------------------
+	// Class 4
+	// ------------------------------------------------------------
+	EntityAI classFour(PlayerBase player)
+	{
+		EntityAI gun = player.GetHumanInventory().CreateInHands("FNX45");
+        addMags(player, "Mag_FNX45_15Rnd", 2);
+
+		return gun;
+	}
+	
+	// ------------------------------------------------------------
+	// Class 5
+	// ------------------------------------------------------------
+	EntityAI classFive(PlayerBase player)
+	{
+		EntityAI gun = player.GetHumanInventory().CreateInHands("Expansion_M9");
+        addMags(player, "Mag_Expansion_M9_15Rnd", 2);
+
+		return gun;
+	}
+
+	// ------------------------------------------------------------
+	// Override StartingEquipSetup
+	// ------------------------------------------------------------
+	override void StartingEquipSetup(PlayerBase player, bool clothesChosen)
+	{
+		if ( GetExpansionSettings() && GetExpansionSettings().GetSpawn() && GetExpansionSettings().GetSpawn().StartingGear.UseStartingGear )
+		{
+			SetStartingGear(player);
+		}
+		else
+		{
+			//
+			TStringArray hats = {"BaseballCap_Beige", "BaseballCap_Blue", "BaseballCap_Olive", "BeanieHat_Brown", 
+			"BeanieHat_Grey", "BoonieHat_Black", "BoonieHat_NavyBlue"};
+			
+			TStringArray tops = {"Sweater_Green","Sweater_Gray","TShirt_OrangeWhiteStripes","TShirt_Beige","TShirt_Black",
+			"Jeans_Grey", "TShirt_Blue","TShirt_Green","TShirt_Grey","TShirt_Red","TShirt_White"};
+			
+			TStringArray pants = {"Jeans_Black","Jeans_BlueDark","Jeans_Blue","Jeans_Brown","Jeans_Green","Jeans_Grey",
+			"HunterPants_Autumn","HunterPants_Spring","JumpsuitJacket_Gray","JumpsuitPants_Green","Jeans_Grey"};
+			
+			TStringArray shoes = {"AthleticShoes_Black","AthleticShoes_Brown","AthleticShoes_Grey","HikingBootsLow_Beige",
+			"HikingBootsLow_Black","HikingBootsLow_Grey","HikingBoots_Black","HikingJacket_Black"};
+			
+			TStringArray backpack = {"HuntingBag","DryBag_Black","DryBag_Blue",
+			"DryBag_Green", "DryBag_Orange","DryBag_Red","DryBag_Yellow","MountainBag_Blue",
+			"MountainBag_Green","MountainBag_Red"};
+						
+			TStringArray drink = {"SodaCan_Cola","SodaCan_Kvass","SodaCan_Pipsi","SodaCan_Spite"};
+			
+			TStringArray food = {"Tomato","TacticalBaconCan", "BakedBeansCan", "SpaghettiCan", "Rice", "Potato","PowderedMilk",
+			"PeachesCan","Pear"};
+			
+			TStringArray tools = {"BaseballBat", "Crowbar", "FirefighterAxe", "NailedBaseballBat", "Shovel", "WoodAxe"};
+			
+			//
+			
+			player.RemoveAllItems();
+			
+			player.GetInventory().CreateInInventory(hats.GetRandomElement());
+			player.GetInventory().CreateInInventory(tops.GetRandomElement());
+			player.GetInventory().CreateInInventory(pants.GetRandomElement());
+			player.GetInventory().CreateInInventory(shoes.GetRandomElement());
+			player.GetInventory().CreateInInventory(backpack.GetRandomElement());
+			player.GetInventory().CreateInInventory(drink.GetRandomElement());
+			player.GetInventory().CreateInInventory(food.GetRandomElement());
+			player.GetInventory().CreateInInventory("CanOpener");
+			ItemBase rags = player.GetInventory().CreateInInventory("Rag");
+			rags.SetQuantity(4);
+
+			EntityAI primary;
+			EntityAI tool = player.GetInventory().CreateInInventory(tools.GetRandomElement());
+		
+			switch (Math.RandomInt(0, 5)) {
+				case 0: primary = classOne(player); break;
+				case 1: primary = classTwo(player); break;
+				case 2: primary = classThree(player); break;
+				case 3: primary = classFour(player); break;
+				case 4: primary = classFive(player); break;
+			}
+				
+			player.LocalTakeEntityToHands(primary);
+			player.SetQuickBarEntityShortcut(primary, 0, true);
+			player.SetQuickBarEntityShortcut(rags, 4, true);
+			player.SetQuickBarEntityShortcut(tool, 5, true);
+		}
+	}
+}
+
+Mission CreateCustomMission(string path)
+{
+	return new CustomMission();
+}
